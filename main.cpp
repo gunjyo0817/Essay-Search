@@ -14,102 +14,64 @@ namespace fs = std::filesystem;
 // Suffix Tree : for suffix search, wildcard search
 class Tree{
 	public:
-		// Trie Node
-		struct TrieNode{
-			TrieNode *children[26];
-			bool isEndOfWord;
+		// Compressed Trie: Radix Tree Node
+        struct TrieNode{
+            map<string, TrieNode*> children;
+            bool isEndOfWord;
 
-			TrieNode(){
-				isEndOfWord = false;
-				memset(children, 0, sizeof(children));
-			}
-		};
+            TrieNode(){
+                isEndOfWord = false;
+            }
+        };
 
-		// Suffix Tree Node
+		// Compressed Suffix Tree Node
 		struct SuffixNode{
-			int a, b;
-			SuffixNode *l[128], *suffix;
-			SuffixNode(int a, int b) : a(a), b(b), suffix(0){
-				memset(l, 0, sizeof(l));
-			}
-		};
+            string str;
+            map<string, SuffixNode*> children;
+            SuffixNode *suffix;
+
+            SuffixNode(string s) : str(s), suffix(0){}
+        };
 
 		TrieNode *trieRoot;
 		SuffixNode *suffixRoot;
 		Tree(){
 			trieRoot = new TrieNode();
-			suffixRoot = new SuffixNode(0, 0);
+			suffixRoot = new SuffixNode("");
 		}
 
 		void addWordToTrie(const string& word) {
-			// cout<<"add word to trie: "<<word<<endl;
 			TrieNode *p = trieRoot;
 
 			for (int i = 0; i < word.size(); i++) {
-				int index = word[i] - 'a';
-				if (!p->children[index])
+				if (!p->children[word])
 					try{
-						p->children[index] = new TrieNode();
+						p->children[word] = new TrieNode();
 					}
 					 catch (const std::bad_alloc& e) {
 						std::cerr << "記憶體不足: " << e.what() << '\n';
 					}
 
-				p = p->children[index];
+				p = p->children[word];
 			}
 
 			p->isEndOfWord = true;
-			// cout<<"finish add word to trie: "<<word<<endl;
 		}
 
 		void addWordToSuffixTree(const string& word) {
-			cout<<"add word to suffix tree: "<<word<<endl;
-			SuffixNode *p = suffixRoot;
+            SuffixNode *p = suffixRoot;
 
-			int N = word.size();
-			for (int a = 0, i = 0; i < N + 1; ++i){
-				SuffixNode *ant = suffixRoot;
-				while (a <= i){
-					while (true){
-						if (a == i) break;
-						SuffixNode *q = p->l[word[a]];
-						if (a + q->b - q->a > i) break;
-						a += q->b - q->a;
-						p = q;
-					}
+            try {
+                p->children[word] = new SuffixNode(word);
+            }
+            catch (const std::bad_alloc& e) {
+                std::cerr << "記憶體不足: " << e.what() << '\n';
+            }
 
-					SuffixNode *q = p;
-					if (a == i){
-						if (p->l[word[i]]) break;
-					}
-					else if (a < i){
-						SuffixNode *r = p->l[word[a]];
-						int k = r->a + i - a;
-						if (k >= word.size()) break;
-						if (word[i] == word[k]) break;
+            p = p->children[word];
 
-						p->l[word[a]] = q = new SuffixNode(r->a, k);
-						q->l[word[k]] = r;
-						r->a = k;
-					}
-
-					try {
-						q->l[word[i]] = new SuffixNode(i, N);
-					}
-					catch (const std::bad_alloc& e) {
-						std::cerr << "記憶體不足: " << e.what() << '\n';
-					}
-
-					if (ant != suffixRoot) ant->suffix = q;
-					ant = q;
-
-					if (p->suffix) p = p->suffix;
-					else a++;
-				}
-				if (ant != suffixRoot) ant->suffix = p;
-			}
-			cout<<"finish add word to suffix tree: "<<word<<endl;
-		}
+            if (p->suffix) p = p->suffix;
+        }
 
 		// Search
 		// bool exactSearch(const string& word) {
