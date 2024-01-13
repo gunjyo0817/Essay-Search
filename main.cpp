@@ -25,19 +25,20 @@ class Tree{
         };
 
 		// Compressed Suffix Tree Node
+		// Suffix Tree Node
 		struct SuffixNode{
-            string str;
-            map<string, SuffixNode*> children;
-            SuffixNode *suffix;
-
-            SuffixNode(string s) : str(s), suffix(0){}
-        };
+			int a, b;
+			SuffixNode *l[128], *suffix;
+			SuffixNode(int a, int b) : a(a), b(b), suffix(0){
+				memset(l, 0, sizeof(l));
+			}
+		};
 
 		TrieNode *trieRoot;
 		SuffixNode *suffixRoot;
 		Tree(){
 			trieRoot = new TrieNode();
-			suffixRoot = new SuffixNode("");
+			suffixRoot = new SuffixNode(0, 0);
 		}
 
 		void addWordToTrie(const string& word) {
@@ -55,19 +56,53 @@ class Tree{
 		}
 
 		void addWordToSuffixTree(const string& word) {
-            SuffixNode *p = suffixRoot;
+			cout<<"add word to suffix tree: "<<word<<endl;
+			SuffixNode *p = suffixRoot;
 
-            try {
-                p->children[word] = new SuffixNode(word);
-            }
-            catch (const std::bad_alloc& e) {
-                std::cerr << "記憶體不足: " << e.what() << '\n';
-            }
+			int N = word.size();
+			for (int a = 0, i = 0; i < N + 1; ++i){
+				SuffixNode *ant = suffixRoot;
+				while (a <= i){
+					while (true){
+						if (a == i) break;
+						SuffixNode *q = p->l[word[a]];
+						if (a + q->b - q->a > i) break;
+						a += q->b - q->a;
+						p = q;
+					}
 
-            p = p->children[word];
+					SuffixNode *q = p;
+					if (a == i){
+						if (p->l[word[i]]) break;
+					}
+					else if (a < i){
+						SuffixNode *r = p->l[word[a]];
+						int k = r->a + i - a;
+						if (k >= word.size()) break;
+						if (word[i] == word[k]) break;
 
-            if (p->suffix) p = p->suffix;
-        }
+						p->l[word[a]] = q = new SuffixNode(r->a, k);
+						q->l[word[k]] = r;
+						r->a = k;
+					}
+
+					try {
+						q->l[word[i]] = new SuffixNode(i, N);
+					}
+					catch (const std::bad_alloc& e) {
+						std::cerr << "記憶體不足: " << e.what() << '\n';
+					}
+
+					if (ant != suffixRoot) ant->suffix = q;
+					ant = q;
+
+					if (p->suffix) p = p->suffix;
+					else a++;
+				}
+				if (ant != suffixRoot) ant->suffix = p;
+			}
+			cout<<"finish add word to suffix tree: "<<word<<endl;
+		}
 
 		// Search
 		bool exactSearch(const string& word) {
@@ -102,17 +137,21 @@ class Tree{
 		}
 
 		bool suffixSearch(const string& suffix) {
-			// Implement suffix search using SuffixNode
 			cout<<"suffix search: "<<suffix<<endl;
 			SuffixNode *p = suffixRoot;
+			int a = 0;
 			for (int i = suffix.size() - 1; i >= 0; i--) {
-				string character = string(1, suffix[i]);
-				if (p->children.find(character) == p->children.end())
-					return false;
-
-				p = p->children[character];
+				char character = suffix[i];
+				while (true) {
+					SuffixNode *q = p->l[character];
+					if (!q) return false;
+					for (int k = q->a; k < q->b; k++) {
+						if (a == suffix.size()) return true;
+						if (suffix[a++] != character) return false;
+					}
+					p = q;
+				}
 			}
-
 			return true;
 		}
 
