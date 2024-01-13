@@ -1,1 +1,1 @@
-# DS Final Project - Array Search
+# DS Final Project - Essay Search
