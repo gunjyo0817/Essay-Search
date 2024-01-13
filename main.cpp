@@ -44,15 +44,11 @@ class Tree{
 			TrieNode *p = trieRoot;
 
 			for (int i = 0; i < word.size(); i++) {
-				if (!p->children[word])
-					try{
-						p->children[word] = new TrieNode();
-					}
-					 catch (const std::bad_alloc& e) {
-						std::cerr << "記憶體不足: " << e.what() << '\n';
-					}
+				string character = string(1, word[i]);
+				if (!p->children[character])
+					p->children[character] = new TrieNode();
 
-				p = p->children[word];
+				p = p->children[character];
 			}
 
 			p->isEndOfWord = true;
@@ -74,18 +70,51 @@ class Tree{
         }
 
 		// Search
-		// bool exactSearch(const string& word) {
-		// 	// Implement exact search using TrieNode
+		bool exactSearch(const string& word) {
+			// Implement exact search using TrieNode
+			// cout<<"exact search: "<<word<<endl;
+			TrieNode *p = trieRoot;
+			for (int i = 0; i < word.size(); i++) {
+				string character = string(1, word[i]);
+				if (p->children.find(character) == p->children.end())
+					return false;
 
-		// }
+				p = p->children[character];
+			}
 
-		// bool prefixSearch(const string& prefix) {
-		// 	// Implement prefix search using TrieNode
-		// }
+			return p->isEndOfWord;
+			
+		}
 
-		// bool suffixSearch(const string& suffix) {
-		// 	// Implement suffix search using SuffixNode
-		// }
+		bool prefixSearch(const string& prefix) {
+			// cout<<"prefix search: "<<prefix<<endl;
+			TrieNode *p = trieRoot;
+			for (int i = 0; i < prefix.size(); i++) {
+				string character = string(1, prefix[i]);
+				if (p->children.find(character) == p->children.end())
+					return false;
+
+				p = p->children[character];
+			}
+
+			return true;
+
+		}
+
+		bool suffixSearch(const string& suffix) {
+			// Implement suffix search using SuffixNode
+			cout<<"suffix search: "<<suffix<<endl;
+			SuffixNode *p = suffixRoot;
+			for (int i = suffix.size() - 1; i >= 0; i--) {
+				string character = string(1, suffix[i]);
+				if (p->children.find(character) == p->children.end())
+					return false;
+
+				p = p->children[character];
+			}
+
+			return true;
+		}
 
 		// bool wildcardSearch(const string& pattern) {
 		// 	// Implement wildcard search using SuffixNode
@@ -166,10 +195,10 @@ int main(int argc, char *argv[]){
 
 	map<string, Tree> tree_map;
 
-	int file_num = 0;
-	for (const auto &entry : fs::directory_iterator(data_dir))
-		file_num++;
-	cout << file_num << endl;
+	// int file_num = 0;
+	// for (const auto &entry : fs::directory_iterator(data_dir))
+	// 	file_num++;
+	// cout << file_num << endl;
 
 
 	// from data_dir get file ....
@@ -179,7 +208,7 @@ int main(int argc, char *argv[]){
 		// cout<<file_num--<<endl;
 		// OPEN FILE
 		file_name = file_path.path().string();
-		cout << file_name << endl;
+		// cout << file_name << endl;
 		fi.open(file_name, ios::in);
 
 		// Create Tree
@@ -197,11 +226,12 @@ int main(int argc, char *argv[]){
 		// Add each word in the title to the Trie and Suffix Tree
 		for(auto &word : title){
 			tree.addWordToTrie(word);
+			// cout<<tree.exactSearch(word)<<endl;
 			tree.addWordToSuffixTree(word);
 		}
 
 		// GET CONTENT LINE BY LINE
-		cout << "start reading content" << endl;
+		// cout << "start reading content" << endl;
 		while (getline(fi, tmp)){
 
 			// GET CONTENT WORD VECTOR
@@ -226,48 +256,60 @@ int main(int argc, char *argv[]){
 
 	cout<<"finish building tree"<<endl;
 	cout<<"start query"<<endl;
+
 	// Read Query File
 	fstream query_file;
 	query_file.open(query, ios::in);
 
 	string query_line;
 	while(getline(query_file, query_line)){
+		// cout << query_line << endl;
 		// GET QUERY WORD VECTOR
 		tmp_string = split(query_line, " ");
 
 		// PARSE QUERY
-		vector<string> query = word_parse(tmp_string);
-
+		// vector<string> query = word_parse(tmp_string);
+		vector<string> query = tmp_string;
 		for(auto &word : query){
 			cout << word << endl;
 		}
 
 		// Process each query
-		/*
+		
 		for (const string& word : query) {
+			cout<<"query: "<<word<<endl;
 			// Iterate over all trees
 			for (auto& pair : tree_map) {
 				const string& file_name = pair.first;
 				Tree& tree = pair.second;
+				// cout<<"file name: "<<file_name<<endl;
+
+				bool found = false;
 
 				if (word[0] == '"' && word[word.size() - 1] == '"') {
 					// Exact search
-					bool found = tree.exactSearch(word.substr(1, word.size() - 2));
-				} else if (word[0] == '*') {
-					// Suffix search
-					bool found = tree.suffixSearch(word.substr(1));
-				} else if (word[word.size() - 1] == '*') {
+					found = tree.exactSearch(word.substr(1, word.size() - 2));
+				} 
+				else if (word[0] == '*' && word[word.size() - 1] == '*') {
+					//suffix search
+					found = tree.suffixSearch(word.substr(1, word.size() - 2));
+				}
+				else if (word[0] == '<' && word[word.size() - 1] == '>') {
+					//wildcard search
+				}
+				else {
 					// Prefix search
-					bool found = tree.prefixSearch(word.substr(0, word.size() - 1));
-				} else if (word[0] == '<' && word[word.size() - 1] == '>') {
-					// Wildcard search
-					bool found = tree.wildcardSearch(word.substr(1, word.size() - 2));
+					found = tree.prefixSearch(word.substr(0, word.size()));
 				}
 
-				// Handle operators (+, /, -)
+				// cout<<found<<endl;
+				if(found){
+					cout << "found " <<file_name << endl;
+				}
 			}
+			// Handle operators (+, /, -)
 		}
-		*/
+		
 	
 	}
 }
