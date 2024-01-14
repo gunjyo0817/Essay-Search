@@ -1,23 +1,6 @@
-/*
-Query Format
-Exact Search: “search-word”
-Eg: we want to search essay with graph, we use query - “graph”
-Prefix Search: search-word
-Eg: we want to search essay with prefix graph, we use query - graph
-Suffix Search: *search-word*
-Eg: we want to search essay with suffix graph, we use query - *graph*
-Wildcard Search: <search-pattern>
-Eg: we want to search essay with word pattern gr*h, we use query - <gr*h>. “*” can be empty, single or multiple characters, so gr*h should match words like graph, growth…etc.
-And operator: “+”
-Eg: we want to search essay with graph and sparsity, we use query – “graph” + “sparsity”
-Or operator: “/”
-Eg: we want to search essay with graph or quantum, we use query – “graph” / “quantum”
-Exclude operator: “-”
-Eg: we want to search essay with graph but without deep, we use query – “graph” - “deep”
-*/
-
 #define FILE_EXTENSION ".txt"
 #define MAX_CHAR 26
+#include "main.hpp"
 #include <fstream>
 #include <string>
 #include <cstring>
@@ -27,215 +10,56 @@ Eg: we want to search essay with graph but without deep, we use query – “gra
 #include <filesystem>
 #include <map>
 #include <queue>
+#include <stack>
+#include <set>
 
 using namespace std;
 namespace fs = std::filesystem;
 
-// Trie -> AC Algo
-class Tree{
-	public:
-		struct TrieNode {
-			TrieNode* suffixLink;
-			TrieNode* outputLink;
-			TrieNode* children[MAX_CHAR];
-			bool isEndOfWord;
-			vector<string> words;
-	
-			TrieNode(){
-				for (int i = 0; i < MAX_CHAR; i++) {
-					children[i] = nullptr;
-				}
-				suffixLink = nullptr;
-				outputLink = nullptr;
-				isEndOfWord = false;
-			}
-		};
+bool isOperator(const string &token){
+    return token == "+" || token == "/" || token == "-";
+}
 
-		TrieNode* root;
-
-		Tree() {
-			root = new TrieNode();
-		}
-
-		~Tree() {
-		}
-
-		void addWords(const vector<string>& words) {
-            for (const auto& word : words) {
-                addPattern(root, word);
-				// addPattern(reversedRoot, string(word.rbegin(), word.rend()));
-            }
-			cout<<"finish adding patterns"<<endl;
-			cout<<"start building suffix links"<<endl;
-            buildSuffixLinks();
-			cout<<"finish building suffix links"<<endl;
-			cout<<"start building output links"<<endl;
-            buildOutputLinks();
-			cout<<"finish building output links"<<endl;
-			cout<<"finish adding words"<<endl;
+vector<string> intersectionSet(const vector<string>& vec1, const vector<string>& vec2){
+    // 實現兩個向量的交集操作
+    vector<string> result;
+    for(auto& i : vec1){
+        if(std::find(vec2.begin(), vec2.end(), i) != vec2.end()){
+            result.push_back(i);
         }
-
-		// 添加模式到 Trie
-		void addPattern(TrieNode* trieRoot, const string& word) {
-			// cout<<"add pattern: "<<word<<endl;
-			TrieNode* node = trieRoot;
-			for (auto &ch : word) {
-				if (node->children[ch - 'a'] == nullptr) {
-					node->children[ch - 'a'] = new TrieNode();
-				}
-				node = node->children[ch - 'a'];
-			}
-			node->isEndOfWord = true;
-			node->words.push_back(word);
-		}
-
-		// 建立後綴鏈接
-		void buildSuffixLinks() {
-			queue<TrieNode*> q;
-			root->suffixLink = root;
-			q.push(root);
-			while (!q.empty()) {
-				TrieNode* curNode = q.front();
-				q.pop();
-				int index = 0;
-				for (auto& child : curNode->children) {
-					if(child == nullptr) continue;
-					TrieNode* fallback = curNode->suffixLink;
-					TrieNode* fallbackChild = fallback->children[index++];
-					while (fallback != root &&  fallbackChild == nullptr) {
-						fallback = fallback->suffixLink;
-					}
-					if (fallback != curNode && fallbackChild) {
-						child->suffixLink = fallbackChild;
-					}
-					else {
-						child->suffixLink = root;
-					}
-					q.push(child);
-				}
-			}
-		}
-
-		// 建立輸出鏈接
-		void buildOutputLinks() {
-			queue<TrieNode*> q;
-			root->outputLink = nullptr;
-			q.push(root);
-			while (!q.empty()) {
-				TrieNode* curNode = q.front();
-				q.pop();
-				TrieNode* fallback = curNode->suffixLink;
-				while(fallback != root && !fallback->isEndOfWord) {
-					fallback = fallback->suffixLink;
-				}
-				if(fallback != curNode && fallback->isEndOfWord) {
-					curNode->outputLink = fallback;
-				}
-				for (auto& child : curNode->children) {
-					if(child == nullptr) continue;
-					q.push(child);
-				}
-			}
-		}
-
-		// Search
-		bool exactSearch(const string& word) {
-			// cout<<"exact search: "<<word<<endl;
-			TrieNode* node = root;
-			for (auto &ch : word) {
-				node = node->children[ch - 'a'];
-				if (node == nullptr) return false;
-			}
-			return node->isEndOfWord;
-		}
-
-		bool prefixSearch(const string& prefix) {
-			// cout<<"prefix search: "<<prefix<<endl;
-			TrieNode* node = root;
-			for (auto &ch : prefix) {
-				node = node->children[ch - 'a'];
-				if (node == nullptr) return false;
-			}
-			return true;
-		}
-
-		bool suffixSearch(const string& suffix) {
-			TrieNode* node = root;
-			for (auto it = suffix.rbegin(); it != suffix.rend(); ++it) {
-				char ch = *it;
-				if (node->children[ch - 'a'] == nullptr) {
-					return false;
-				}
-				node = node->children[ch - 'a'];
-			}
-			if (node->isEndOfWord) {
-				// 检查所有存储的单词是否包含给定的后缀
-				for (const auto& word : node->words) {
-					if (word.size() >= suffix.size() && 
-						word.substr(word.size() - suffix.size()) == suffix) {
-						return true;
-					}
-				}
-			}
-			return false;
-		}
-
-
-
-
-
-
-		// bool wildcardSearch(const string& pattern) {
-		// 	// Implement wildcard search using SuffixNode
-		// }
-};
-
-
-// Utility Func
-
-// string parser : output vector of strings (words) after parsing
-vector<string> word_parse(vector<string> tmp_string){
-	vector<string> parse_string;
-	for (auto &word : tmp_string){
-		string new_str;
-		for (auto &ch : word){
-			if (isalpha(ch)) new_str.push_back(tolower(ch));
-		}
-		parse_string.emplace_back(new_str);
-	}
-	return parse_string;
+    }
+    return result;
 }
 
-vector<string> split(const string &str, const string &delim){
-	vector<string> res;
-	if ("" == str) return res;
-
-	char *strs = new char[str.length() + 1];
-	strcpy(strs, str.c_str());
-
-	char *d = new char[delim.length() + 1];
-	strcpy(d, delim.c_str());
-
-	char *p = strtok(strs, d);
-	while (p){
-		string s = p;
-		res.push_back(s);
-		p = strtok(NULL, d);
-	}
-
-	return res;
+vector<string> unionSet(const vector<string>& vec1, const vector<string>& vec2, vector<Data>& data_list){
+    // 實現兩個向量的聯集操作
+    vector<string> result = vec1;
+    for(auto& i : data_list){
+        if(std::find(vec1.begin(), vec1.end(), i.title) != vec1.end() || std::find(vec2.begin(), vec2.end(), i.title) != vec2.end()){
+            if(std::find(result.begin(), result.end(), i.title) == result.end()) result.push_back(i.title);
+        }
+    }
+    return result;
 }
 
-
-
+vector<string> differenceSet(const vector<string>& vec1, const vector<string>& vec2){
+    // 實現兩個向量的差集操作
+    vector<string> result;
+    for(auto& i : vec1){
+        if(std::find(vec2.begin(), vec2.end(), i) == vec2.end()){
+            result.push_back(i);
+        }
+    }
+    return result;
+}
 
 int main(int argc, char *argv[]){
+	vector<string> out;
 
 	// INPUT :
 	// 1. data directory in data folder
 	// 2. number of txt files
 	// 3. output route
-
 	string data_dir = argv[1] + string("/");
 	string query = string(argv[2]);
 	string output = string(argv[3]);
@@ -246,39 +70,52 @@ int main(int argc, char *argv[]){
 	fstream fi;
 	vector<string> tmp_string;
 
-	map<string, Tree> tree_map;
+	vector<pair<string, int>> query_mode; 
+	// map<string, Tree> tree_map;
+	vector<Data> data_list;
 
-	// from data_dir get file ....
-	// go through all files, build trie and suffix trie
-	cout<<"start building tree"<<endl;
-	for (const auto &file_path : fs::directory_iterator(data_dir)){
-		// cout<<file_num--<<endl;
+	// -------------- Read Datas -------------- //
+	vector<string> paths;
+	for (const auto &file_path : fs::directory_iterator(data_dir)) paths.push_back(file_path.path().string());
+	// sort by file order
+	sort(paths.begin(), paths.end(), [](const string& str1, const string& str2) {
+		unsigned int i = 0;
+		if (str1.length() != str2.length()) return (str1.length() < str2.length());
+		while ((i < str1.length()) && (i < str2.length())) {
+			if (str1[i] < str2[i]) return true;
+			else if (str1[i] > str2[i]) return false;
+			++i;
+		}
+		return false;
+	});
+
+	for (const auto &file_path : paths) {
 		// OPEN FILE
-		file_name = file_path.path().string();
-		cout << file_name << endl;
-		fi.open(file_name, ios::in);
+		std::cout << file_path << std::endl;
 
-		// Create Tree
-		Tree tree;
+		fi.open(file_path, std::ios::in);
 
 		// GET TITLENAME
-		getline(fi, title_name);
+		std::getline(fi, title_name);
 		// cout << title_name << endl;
 
 		// GET TITLENAME WORD ARRAY
 		tmp_string = split(title_name, " ");
 
-		vector<string> title = word_parse(tmp_string);
+		std::vector<std::string> title = word_parse(tmp_string);
 
-		vector<string> words;
+		// Create Tree
+		Tree tree;
 
 		// Add each word in the title to the Trie and Suffix Tree
 		for(auto &word : title){
-			words.push_back(word);
+			if(word == "") continue;
+			tree.buildPrefixTree(word);
+			tree.buildSuffixTree(word);
 		}
 
 		// GET CONTENT LINE BY LINE
-		cout << "start reading content" << endl;
+		// std::cout << "start reading content" << endl;
 		while (getline(fi, tmp)){
 
 			// GET CONTENT WORD VECTOR
@@ -289,89 +126,114 @@ int main(int argc, char *argv[]){
 
 			// Add each word in the content to the Trie and Suffix Tree
 			for(auto &word : content){
-				words.push_back(word);
+				if(word == "") continue;
+				tree.buildPrefixTree(word);
+				tree.buildSuffixTree(word);
 			}
 		}
-		cout<<"finish reading content"<<endl;
 
-		// BUILD TREE
-		tree.addWords(words);
-		cout<<"finish building tree"<<endl;
+		// std::cout<<"finish reading content"<<endl;
 
 		// SAVE TREE
-		tree_map[title_name] = tree;
-		cout<<"finish saving tree"<<endl;
+		Data data = {true, title_name, tree};
+		
+		data_list.push_back(data);
+		std::cout<<"finish saving tree"<<endl;
 
 		// CLOSE FILE
 		fi.close();
 	}
 
-	cout<<"finish building tree"<<endl;
-	cout<<"start query"<<endl;
-
-	// Read Query File
+	
+	// -------------- Read Query File -------------- //
 	fstream query_file;
 	query_file.open(query, ios::in);
 
+	vector<vector<string>> query_list;
+
 	string query_line;
 	while(getline(query_file, query_line)){
-		// cout << query_line << endl;
+		cout << query_line << endl;
 		// GET QUERY WORD VECTOR
 		tmp_string = split(query_line, " ");
 
-		// PARSE QUERY
-		// vector<string> query = word_parse(tmp_string);
-		vector<string> query = tmp_string;
-		for(auto &word : query){
-			cout << word << endl;
-		}
+		// PROCESS QUERY
+		vector<string> resultSet;
+		string oper = "X";
 
-		// Process each query
-		
-		for (const string& word : query) {
-			cout<<"query: "<<word<<endl;
-			// Iterate over all trees
-			for (auto& pair : tree_map) {
-				const string& file_name = pair.first;
-				Tree& tree = pair.second;
-				// cout<<"file name: "<<file_name<<endl;
+		for(auto& token : tmp_string){
+			out.push_back(token);
+			if(isOperator(token)){
+				oper = token;
+			}
+			else{
+				cout << "token: " << token << endl;
+				vector<string> currentSet;
 
-				bool found = false;
+				// Iterate over all trees
+				for(auto& data : data_list){
+					// cout<<"file name: "<<file_name<<endl;
 
-				if (word[0] == '"' && word[word.size() - 1] == '"') {
-					// Exact search
-					found = tree.exactSearch(word.substr(1, word.size() - 2));
-				} 
-				else if (word[0] == '*' && word[word.size() - 1] == '*') {
-					//suffix search
-					found = tree.suffixSearch(word.substr(1, word.size() - 2));
+					bool found = false;
+
+					if (token[0] == '"' && token[token.size() - 1] == '"') {
+						// Exact search
+						found = data.tree.search(data.tree.prefixRoot, token.substr(1, token.size() - 2), EXACT);
+					} 
+					else if (token[0] == '*' && token[token.size() - 1] == '*') {
+						//suffix search
+						found = data.tree.search(data.tree.suffixRoot, token.substr(1, token.size() - 2), SUFFIX);
+					}
+					else if (token[0] == '<' && token[token.size() - 1] == '>') {
+						//wildcard search
+					}
+					else {
+						// Prefix search
+						found = data.tree.search(data.tree.prefixRoot, token, PREFIX);
+					}
+
+					// cout<<found<<endl;
+					if(found){
+						cout << "found " << token << " in " << data.title << endl;
+						currentSet.push_back(data.title);
+					}
 				}
-				else if (word[0] == '<' && word[word.size() - 1] == '>') {
-					//wildcard search
+				if(oper == "X"){
+					resultSet = currentSet;
 				}
-				else {
-					// Prefix search
-					found = tree.prefixSearch(word.substr(0, word.size()));
+				else if(oper == "+"){
+					resultSet = intersectionSet(resultSet, currentSet);
 				}
-
-				// cout<<found<<endl;
-				if(found){
-					cout << "found " <<file_name << endl;
+				else if(oper == "/"){
+					resultSet = unionSet(resultSet, currentSet, data_list);
+				}
+				else if(oper == "-"){
+					resultSet = differenceSet(resultSet, currentSet);
+				}
+				cout << "resultSet: " << endl;
+				for(auto& i : resultSet){
+					cout << i << endl;
 				}
 			}
-			// Handle operators (+, /, -)
 		}
-		
-	
+
+		if(resultSet.size() == 0){
+			cout << "Not Found!" << endl;
+			out.push_back("Not Found!");
+		}
+		else{
+			for(auto& i : resultSet){
+				out.push_back(i);
+			}
+		}		
 	}
+	query_file.close();
+
+	// -------------- Write output -------------- //
+	fstream fo;
+	fo.open(output, ios::out);
+	for(auto &data: out){
+		fo << data << endl;
+	}
+	fo.close();
 }
-
-// 1. UPPERCASE CHARACTER & LOWERCASE CHARACTER ARE SEEN AS SAME.
-// 2. FOR SPECIAL CHARACTER OR DIGITS IN CONTENT OR TITLE -> PLEASE JUST IGNORE, YOU WONT NEED TO CONSIDER IT.
-//    EG : "AB?AB" WILL BE SEEN AS "ABAB", "I AM SO SURPRISE!" WILL BE SEEN AS WORD ARRAY AS ["I", "AM", "SO", "SURPRISE"].
-// 3. THE OPERATOR IN "QUERY.TXT" IS LEFT ASSOCIATIVE
-//    EG : A + B / C == (A + B) / C
-
-//
-
-//////////////////////////////////////////////////////////
