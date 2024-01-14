@@ -58,68 +58,23 @@ class Tree{
 		}
 
 		bool search(TrieNode* node, string target, int mode){
-			// cout << "searching " << target << endl;
-			// cout << "mode = " << mode << endl;
+			if (mode == WILDCARD) {
+				return wildcardSearch(node, target, 0);
+			}
 			TrieNode* cur = node;
-
-			if(mode == EXACT){
-				for(auto &c : target){
-					int alpha = tolower(c) - 'a';
-					if(cur->children[alpha] != NULL){
-						cur = cur->children[alpha];
-					}
-					else{
-						return false;
-					}
-				}
-				return cur->isEndOfWord == true;
-			}
-			else if(mode == PREFIX){
-				cout << "prefix search: " << target << endl;
-				for(auto &c : target){
-					int alpha = tolower(c) - 'a';
-					if(cur->children[alpha] != NULL){
-						cur = cur->children[alpha];
-					}
-					else{
-						return false;
-					}
-				}
-				return true;
-			}
-			else if(mode == SUFFIX){
-				for(int i = 0; i < target.length(); i++){
-					int alpha = target[target.length() - i - 1] - 'a';
-					if(cur->children[alpha] != NULL){
-						cur = cur->children[alpha];
-						if( i == target.length() - 1 ) return true;
-					}
-					else{
-						return false;
-					}
-				}
-				return false;
-			}
-			else if(mode == WILDCARD){
+			int alpha;
+			for(int i = 0; i < target.length(); i++){
+				if( mode == SUFFIX ) alpha = tolower(target[target.length() - i - 1]) - 'a';
+				else alpha = tolower(target[i]) - 'a';
 				
-				return false;
+				if(cur->children[alpha] != NULL){
+					cur = cur->children[alpha];
+					if( i == target.length() - 1 && mode == EXACT ) return cur->isEndOfWord == true;
+					else if( i == target.length() - 1 && mode != EXACT ) return true;  
+				}
+				else return false;
 			}
 			return false;
-			// int alpha;
-			// for(int i = 0; i < target.length(); i++){
-			// 	if( mode == SUFFIX ) alpha = target[target.length() - i - 1] - 'a';
-			// 	else alpha = target[i] - 'a';
-				
-			// 	if(cur->children[alpha] != NULL){
-			// 		cur = cur->children[alpha];
-			// 		if( i == target.length() - 1 && mode == EXACT ) return cur->isEndOfWord == true;
-			// 		else if( i == target.length() - 1 && mode != EXACT ) return true;  
-			// 	}
-			// 	else{
-			// 		break;
-			// 	}
-			// }
-			// return false;
 		}
 
 		
@@ -133,16 +88,6 @@ class Tree{
 				node = node->children[alpha];
 			}
 			node->isEndOfWord = true;
-			// if( index >= word.length() ) return;
-			// int alpha = word[index] - 'a';
-			// if( node->children[alpha] == NULL ){
-			// 	node->children[alpha] = new TrieNode(word.substr(0, index + 1));
-			// }
-			// if( index == word.length() - 1 ){
-			// 	node->children[alpha]->isEndOfWord = true;
-			// 	return;
-			// }
-			// buildPrefixTree(node->children[alpha], word, index + 1);
 			return;
 		}
 
@@ -159,6 +104,35 @@ class Tree{
 			}
 			buildSuffixTree(node->children[alpha], word, index + 1);
 			return;
+		}
+
+		bool wildcardSearch(TrieNode* node, string target, int index) {
+			if (node == nullptr) {
+				return false;
+			}
+			if (index == target.size()) {
+				return node->isEndOfWord;
+			}
+			if (target[index] == '*') {
+				if (wildcardSearch(node, target, index + 1)) {
+					return true;
+				}
+				for (int i = 0; i < MAX_CHAR; i++) {
+					if (node->children[i] != nullptr) {
+						if (wildcardSearch(node->children[i], target, index)) {
+							return true;
+						}
+					}
+				}
+			} else {
+				int alpha = tolower(target[index]) - 'a';
+				if (node->children[alpha] != nullptr) {
+					if (wildcardSearch(node->children[alpha], target, index + 1)) {
+						return true;
+					}
+				}
+			}
+			return false;
 		}
 };
 

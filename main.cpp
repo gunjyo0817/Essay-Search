@@ -12,48 +12,66 @@
 #include <queue>
 #include <stack>
 #include <set>
+#include <chrono>
 
 using namespace std;
 namespace fs = std::filesystem;
+
+enum OperMode {
+    NONE,
+    AND,
+    OR,
+	EXCLUDE
+};
 
 bool isOperator(const string &token){
     return token == "+" || token == "/" || token == "-";
 }
 
-vector<string> intersectionSet(const vector<string>& vec1, const vector<string>& vec2){
-    // 實現兩個向量的交集操作
-    vector<string> result;
-    for(auto& i : vec1){
-        if(std::find(vec2.begin(), vec2.end(), i) != vec2.end()){
-            result.push_back(i);
-        }
-    }
-    return result;
-}
+// vector<string> intersectionSet(const vector<string>& vec1, const vector<string>& vec2){
+//     // 實現兩個向量的交集操作
+//     vector<string> result;
+//     for(auto& i : vec1){
+//         if(std::find(vec2.begin(), vec2.end(), i) != vec2.end()){
+//             result.push_back(i);
+//         }
+//     }
+//     return result;
+// }
 
-vector<string> unionSet(const vector<string>& vec1, const vector<string>& vec2, vector<Data>& data_list){
-    // 實現兩個向量的聯集操作
-    vector<string> result = vec1;
-    for(auto& i : data_list){
-        if(std::find(vec1.begin(), vec1.end(), i.title) != vec1.end() || std::find(vec2.begin(), vec2.end(), i.title) != vec2.end()){
-            if(std::find(result.begin(), result.end(), i.title) == result.end()) result.push_back(i.title);
-        }
-    }
-    return result;
-}
+// vector<string> unionSet(const vector<string>& vec1, const vector<string>& vec2, vector<Data>& data_list){
+//     // 實現兩個向量的聯集操作
+//     vector<string> result;
+// 	set<string> seen;
+//     for(auto& i : data_list){
+//         if(std::find(vec1.begin(), vec1.end(), i.title) != vec1.end() || std::find(vec2.begin(), vec2.end(), i.title) != vec2.end()){
+//             result.push_back(i.title);
+//         }
+//     }
+// 	for(const auto& data : data_list){
+//         if((find(vec1.begin(), vec1.end(), data.path) != vec1.end() ||
+//             find(vec2.begin(), vec2.end(), data.path) != vec2.end()) &&
+//             seen.find(data.path) == seen.end()) {
+//             result.push_back(data.path);
+//             seen.insert(data.path); // 标记为已添加
+//         }
+//     }
+//     return result;
+// }
 
-vector<string> differenceSet(const vector<string>& vec1, const vector<string>& vec2){
-    // 實現兩個向量的差集操作
-    vector<string> result;
-    for(auto& i : vec1){
-        if(std::find(vec2.begin(), vec2.end(), i) == vec2.end()){
-            result.push_back(i);
-        }
-    }
-    return result;
-}
+// vector<string> differenceSet(const vector<string>& vec1, const vector<string>& vec2){
+//     // 實現兩個向量的差集操作
+//     vector<string> result;
+//     for(auto& i : vec1){
+//         if(std::find(vec2.begin(), vec2.end(), i) == vec2.end()){
+//             result.push_back(i);
+//         }
+//     }
+//     return result;
+// }
 
 int main(int argc, char *argv[]){
+	// auto start = chrono::high_resolution_clock::now();  // 開始計時
 	vector<string> out;
 
 	// INPUT :
@@ -91,7 +109,7 @@ int main(int argc, char *argv[]){
 
 	for (const auto &file_path : paths) {
 		// OPEN FILE
-		std::cout << file_path << std::endl;
+		// cout << file_path << std::endl;
 
 		fi.open(file_path, std::ios::in);
 
@@ -135,10 +153,10 @@ int main(int argc, char *argv[]){
 		// std::cout<<"finish reading content"<<endl;
 
 		// SAVE TREE
-		Data data = {true, title_name, tree};
+		Data data = {false, title_name, tree};
 		
 		data_list.push_back(data);
-		std::cout<<"finish saving tree"<<endl;
+		// std::cout<<"finish saving tree"<<endl;
 
 		// CLOSE FILE
 		fi.close();
@@ -153,25 +171,32 @@ int main(int argc, char *argv[]){
 
 	string query_line;
 	while(getline(query_file, query_line)){
-		cout << query_line << endl;
+		// out.push_back("Query: " + query_line);
+		// cout << query_line << endl;
 		// GET QUERY WORD VECTOR
 		tmp_string = split(query_line, " ");
 
 		// PROCESS QUERY
-		vector<string> resultSet;
-		string oper = "X";
+		// vector<string> resultSet;
+		// string oper = "X";
+		int oper = NONE;
 
 		for(auto& token : tmp_string){
-			out.push_back(token);
+			// out.push_back(token);
 			if(isOperator(token)){
-				oper = token;
+				oper = token == "+" ? AND : token == "/" ? OR : EXCLUDE;
 			}
 			else{
-				cout << "token: " << token << endl;
-				vector<string> currentSet;
+				// cout << "token: " << token << endl;
+				// vector<string> currentSet;
 
+				
 				// Iterate over all trees
 				for(auto& data : data_list){
+					if(oper == AND && data.isResult == false) continue;
+					if(oper == OR && data.isResult == true) continue;
+					if(oper == EXCLUDE && data.isResult == false) continue;
+
 					// cout<<"file name: "<<file_name<<endl;
 
 					bool found = false;
@@ -186,46 +211,48 @@ int main(int argc, char *argv[]){
 					}
 					else if (token[0] == '<' && token[token.size() - 1] == '>') {
 						//wildcard search
+						found = data.tree.search(data.tree.prefixRoot, token.substr(1, token.size() - 2), WILDCARD);
 					}
 					else {
 						// Prefix search
 						found = data.tree.search(data.tree.prefixRoot, token, PREFIX);
 					}
 
-					// cout<<found<<endl;
 					if(found){
-						cout << "found " << token << " in " << data.title << endl;
-						currentSet.push_back(data.title);
+						// cout << "found " << token << " in " << data.title << endl;
+						// currentSet.push_back(data.title);
+						if(oper == AND) data.isResult = true;
+						else if(oper == OR) data.isResult = true;
+						else if(oper == EXCLUDE) data.isResult = false;
+						else data.isResult = true;
 					}
-				}
-				if(oper == "X"){
-					resultSet = currentSet;
-				}
-				else if(oper == "+"){
-					resultSet = intersectionSet(resultSet, currentSet);
-				}
-				else if(oper == "/"){
-					resultSet = unionSet(resultSet, currentSet, data_list);
-				}
-				else if(oper == "-"){
-					resultSet = differenceSet(resultSet, currentSet);
-				}
-				cout << "resultSet: " << endl;
-				for(auto& i : resultSet){
-					cout << i << endl;
+					else{
+						if(oper == AND) data.isResult = false;
+					}
 				}
 			}
 		}
 
-		if(resultSet.size() == 0){
-			cout << "Not Found!" << endl;
+		bool isNotFound  = true;
+		for(auto& data : data_list){
+			if(data.isResult == true){
+				out.push_back(data.title);
+				data.isResult = false;
+				isNotFound = false;
+			}
+		}
+		if(isNotFound){
 			out.push_back("Not Found!");
 		}
-		else{
-			for(auto& i : resultSet){
-				out.push_back(i);
-			}
-		}		
+		// if(resultSet.size() == 0){
+		// 	// cout << "Not Found!" << endl;
+		// 	out.push_back("Not Found!");
+		// }
+		// else{
+		// 	for(auto& i : resultSet){
+		// 		out.push_back(i);
+		// 	}
+		// }		
 	}
 	query_file.close();
 
@@ -236,4 +263,11 @@ int main(int argc, char *argv[]){
 		fo << data << endl;
 	}
 	fo.close();
+	// cout << "finish writing output" << endl;
+	// auto end = chrono::high_resolution_clock::now();  // 結束計時
+    // auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);  // 計算經過的時間
+
+    // cout << "Program executed in " << duration.count() << " milliseconds." << endl;  // 輸出經過的時間
+
+    return 0;
 }
