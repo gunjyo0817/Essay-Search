@@ -3,12 +3,9 @@
 #include <fstream>
 #include <string>
 #include <cstring>
-#include <cstdlib>
 #include <vector>
 #include <iostream>
 #include <filesystem>
-#include <map>
-#include <queue>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -28,10 +25,6 @@ class Tree{
 			TrieNode* children[MAX_CHAR];
 			bool isEndOfWord;
 			string word;
-	
-			TrieNode() : isEndOfWord(false), word("") {
-				for(int i = 0; i < MAX_CHAR; i++) children[i] = NULL;
-			}
 
 			TrieNode(string s) : isEndOfWord(false), word(s) {
 				for(int i = 0; i < MAX_CHAR; i++) children[i] = NULL;
@@ -49,15 +42,15 @@ class Tree{
 		~Tree() {
 		}
 
-		void buildPrefixTree(string word){
+		void buildPrefixTree(string &word){
 			buildPrefixTree(prefixRoot, word);
 		}
 
-		void buildSuffixTree(string word){
+		void buildSuffixTree(string &word){
 			buildSuffixTree(suffixRoot, word, 0);
 		}
 
-		bool search(TrieNode* node, string target, int mode){
+		bool search(TrieNode* &node, string target, int mode){
 			if (mode == WILDCARD) {
 				return wildcardSearch(node, target, 0);
 			}
@@ -79,7 +72,7 @@ class Tree{
 
 		
 	private:
-		void buildPrefixTree(TrieNode* node, string word){
+		void buildPrefixTree(TrieNode* &node, string &word){
 			for(auto &c : word){
 				int alpha = tolower(c) - 'a';
 				if( node->children[alpha] == NULL ){
@@ -91,7 +84,7 @@ class Tree{
 			return;
 		}
 
-		void buildSuffixTree(TrieNode* node, string word, int index){
+		void buildSuffixTree(TrieNode* &node, string &word, int index){
 			if( index >= word.length() ) return;
 			int alpha = word[word.length() - index - 1] - 'a';
 			if( node->children[alpha] == NULL ){
@@ -106,13 +99,9 @@ class Tree{
 			return;
 		}
 
-		bool wildcardSearch(TrieNode* node, string target, int index) {
-			if (node == nullptr) {
-				return false;
-			}
-			if (index == target.size()) {
-				return node->isEndOfWord;
-			}
+		bool wildcardSearch(TrieNode* &node, string target, int index) {
+			if (node == nullptr) return false;
+			if (index == target.size()) return node->isEndOfWord;
 			if (target[index] == '*') {
 				if (wildcardSearch(node, target, index + 1)) {
 					return true;
@@ -147,7 +136,7 @@ struct Data{
 // -------------- Utility Func -------------- //
 
 // string parser : output vector of strings (words) after parsing
-vector<string> word_parse(vector<string> tmp_string){
+vector<string> word_parse(vector<string> &tmp_string){
 	vector<string> parse_string;
 	for (auto &word : tmp_string){
 		string new_str;
@@ -157,20 +146,6 @@ vector<string> word_parse(vector<string> tmp_string){
 		parse_string.emplace_back(new_str);
 	}
 	return parse_string;
-}
-
-vector<pair<string, int>> query_parse(vector<string> tmp_string, bool &flag){
-	vector<pair<string, int>> parse_string;
-	for(auto& token : tmp_string){
-        if(token == "*"){
-            parse_string.push_back(make_pair(token, -1)); // -1 表示運算子
-        }
-		else{
-            parse_string.push_back(make_pair(token, 1)); // 1 表示運算元
-        }
-    }
-
-    return parse_string;
 }
 
 vector<string> split(const string &str, const string &delim){
@@ -186,7 +161,7 @@ vector<string> split(const string &str, const string &delim){
 	char *p = strtok(strs, d);
 	while (p){
 		string s = p;
-		res.push_back(s);
+		res.emplace_back(s);
 		p = strtok(NULL, d);
 	}
 
