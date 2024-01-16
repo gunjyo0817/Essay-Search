@@ -7,7 +7,7 @@
 #include <vector>
 #include <iostream>
 #include <filesystem>
-#include <thread>
+#include <algorithm>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -96,6 +96,7 @@ int main(int argc, char *argv[]){
 	string query_line;
 	while(getline(query_file, query_line)){
 		// GET QUERY WORD VECTOR
+		// out.emplace_back(query_line);
 		tmp_string = split(query_line, " ");
 
 		int oper = NONE;

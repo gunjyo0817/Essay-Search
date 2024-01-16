@@ -43,7 +43,7 @@ class Tree{
 		}
 
 		void buildPrefixTree(string &word){
-			buildPrefixTree(prefixRoot, word);
+			buildPrefixTree(prefixRoot, word, 0);
 		}
 
 		void buildSuffixTree(string &word){
@@ -72,16 +72,20 @@ class Tree{
 
 		
 	private:
-		void buildPrefixTree(TrieNode* &node, string &word){
-			for(auto &c : word){
-				int alpha = tolower(c) - 'a';
-				if( node->children[alpha] == NULL ){
-					node->children[alpha] = new TrieNode(word.substr(0, 1));
-				}
-				node = node->children[alpha];
+		void buildPrefixTree(TrieNode* &node, string &word, int index = 0){
+			if( index >= word.length() ) return;
+			int alpha = word[index] - 'a';
+			if( node->children[alpha] == NULL ){
+				node->children[alpha] = new TrieNode(word.substr(0, index + 1));
 			}
-			node->isEndOfWord = true;
+
+			if( index == word.length() - 1 ){
+				node->children[alpha]->isEndOfWord = true;
+				return;
+			}
+			buildPrefixTree(node->children[alpha], word, index + 1);
 			return;
+			
 		}
 
 		void buildSuffixTree(TrieNode* &node, string &word, int index){
@@ -113,7 +117,8 @@ class Tree{
 						}
 					}
 				}
-			} else {
+			} 
+			else {
 				int alpha = tolower(target[index]) - 'a';
 				if (node->children[alpha] != nullptr) {
 					if (wildcardSearch(node->children[alpha], target, index + 1)) {
