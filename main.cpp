@@ -37,6 +37,7 @@ int main(int argc, char *argv[]){
 
 	// -------------- Read Datas -------------- //
 	vector<string> paths;
+	int file_count = 0;
 	for (const auto &file_path : fs::directory_iterator(data_dir)) paths.emplace_back(file_path.path().string());
 	// sort by file order
 	sort(paths.begin(), paths.end(), [](const string& str1, const string& str2) {
@@ -96,7 +97,6 @@ int main(int argc, char *argv[]){
 	string query_line;
 	while(getline(query_file, query_line)){
 		// GET QUERY WORD VECTOR
-		// out.emplace_back(query_line);
 		tmp_string = split(query_line, " ");
 
 		int oper = NONE;
