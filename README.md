@@ -32,6 +32,7 @@ Supports Exact, Prefix, Suffix, and Wildcard searches.
 - **Wildcard Search**: Implemented using recursion to traverse the Trie. It considers all possible paths for the '*' character, representing zero or more characters.
 <img src="src/image-3.png" height = "20%" alt="search function"/>
 <img src="src/image-4.png" height = "20%" alt="wildcard search function"/>
+
 ## Main Process
 
 In `main.cpp`, the process is divided into three main steps:
